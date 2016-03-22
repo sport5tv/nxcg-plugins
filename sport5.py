@@ -2,74 +2,52 @@ from nxcg.plugin import NXCGPlugin
 from nxcg.utils import textify
 
 SPORT5_COLOR_PRESETS = {
-        "sport blue" : "#006CB8",
+        "sport blue"    : "#006CB8",
         "sport blue 80" : "#006CB8E6",
-        "sport grey": "#252323",
-        "sport grey 80": "#252323E6",
-        "text_tick" : "#d3d3d3",
-        "text_head" : "#FF8735",
-        "text_body" : "#B0C7E8",
-        "text_crawl" : "#d3d3d3",
+        "sport grey"    : "#252323",
+        "sport grey 80" : "#252323E6",
+        "sport gold"    : "#ff8735",
     }
-
-FONT_TICK = 'Roboto Medium 26'
-FONT_CLOCK = 'Roboto Bold 26'
-FONT_HEAD = 'Roboto Medium 48'
-FONT_BODY = 'Roboto 36'
-FONT_CRAWL = 'Roboto Medium 26'
-
-FONT_TICK = 'Dosis SemiBold 24'
-FONT_CLOCK = 'Dosis Bold 24'
-FONT_HEAD = 'Dosis Medium 38'
-FONT_BODY = 'Dosis 28'
-FONT_CRAWL = 'Dosis Medium 26'
 
 #
 # Our TV Plugin itself
 #
 
-
 class Plugin(NXCGPlugin):
     def on_init(self):
         self.cg.colors.update(SPORT5_COLOR_PRESETS)
+        self.cg.nxkit = {
+                "ticker_position" : "bottom",
+                "ticker_voffset"  : 4,
+                "ticker_background" : "sport grey 80",
+                "ticker_color" : "white",
+                "ticker_font" : "Dosis SemiBold 24",
+                "clock_background" : "sport blue",
+                "clock_font" : "Dosis Bold 24",
+                "text_area_head_font" : "Dosis Medium 38",
+                "text_area_head_color" : "sport gold",
+                "text_area_head_background" : "sport grey 80",
+                "text_area_body_font" : "Dosis 28",
+                "text_area_body_color" : "white",
+            }
 
-        self.ticker_voffset = 4 
-        self.ticker_h = 48
-        self.ticker_y = self.cg.safe("b") - self.ticker_h
-        self.clock_w = 100
-        self.clock_x = self.cg.safe("r") - self.clock_w
-        
-    def ticker(self, text):
-        text = textify(text)
-        text = text.upper()
-        self.cg.set_color("sport grey 80")
-        self.cg.rect(0, self.ticker_y, self.cg.width, self.ticker_h)
-        self.cg.text(text,
-                pos=(self.cg.safe("l"), self.ticker_y + self.ticker_voffset),
-                color="text_tick",
-                font=FONT_TICK,
-            )
+    def ticker(self, *args, **kwargs):
+        self.cg.nxkit_ticker(*args, **kwargs)
 
-    def clock(self, tstamp):
-        self.cg.set_color("sport blue")
-        self.cg.rect(self.clock_x, self.ticker_y, self.cg.width - self.clock_x, self.ticker_h)
-        a,b = self.cg.text(tstamp,
-                pos=(self.clock_x + 14, self.ticker_y + self.ticker_voffset),
-                color="text_tick",
-                font=FONT_CLOCK
-            )
+    def clock(self, *args, **kwargs):
+        self.cg.nxkit_clock(*args, **kwargs)
 
     def tweet_bar(self, account, text):
         pad_b = 35
         pad_t = 20
         pad_r = 30
-        
+
         tweet_x = self.cg.safe("l")
         tweet_max_w = 1000
 
         w, h = self.cg.text(text,
-            font=FONT_TICK,
-            color="text_tick",
+            font=self.cg.nxkit["ticker_font"],
+            color=self.cg.nxkit["ticker_color"],
             width=tweet_max_w,
             spacing=5,
             render=False
@@ -79,24 +57,24 @@ class Plugin(NXCGPlugin):
         tweet_bar_h = h + pad_b + pad_t
 
         self.cg.set_color("sport blue 80")
-        self.cg.rect(0, self.ticker_y - tweet_bar_h, tweet_bar_w, tweet_bar_h)
-        self.cg.text_render(tweet_x,  self.ticker_y - tweet_bar_h + pad_t )
+        self.cg.rect(0, self.cg.nxkit_ticker_y - tweet_bar_h, tweet_bar_w, tweet_bar_h)
+        self.cg.text_render(tweet_x,  self.cg.nxkit_ticker_y - tweet_bar_h + pad_t )
 
 
     def info(self, *args):
         base_x = self.cg.safe("l")
         base_y = self.cg.safe("t")
         for i, text in enumerate(args):
-            y = base_y + i*(self.ticker_h)
+            y = base_y + i*(self.cg.nxkit_param("ticker_height"))
             if i == 0:
                 bg_color = "sport blue 80"
                 fg_color = "text_tick"
             else:
                 bg_color = "sport grey 80"
                 fg_color = "text_tick"
-           
+
             w, h = self.cg.text(textify(text),
-                font=FONT_TICK,
+                font=self.cg.nxkit["ticker_font"],
                 color=fg_color,
                 render=False
                 )
@@ -104,76 +82,14 @@ class Plugin(NXCGPlugin):
             info_w = base_x + w + 20
 
             self.cg.set_color(bg_color)
-            self.cg.rect(0, y, info_w, self.ticker_h)
-            self.cg.text_render(base_x,  y+self.ticker_voffset )
+            self.cg.rect(0, y, info_w, self.cg.nxkit_param("ticker_height"))
+            self.cg.text_render(base_x,  y+self.cg.nxkit_param("ticker_voffset"))
 
 
 
 
     def text_area(self, header, text, source=False):
-        header = textify(header).upper()
-        text = textify(text)
-        off = 160
-        wi = 1200
-        pad_h = 20
-
-        ### Header
-
-        x = self.cg.safe("l") 
-        y = self.cg.safe("t") + off 
-
-        w, h = self.cg.text(header,
-            font=FONT_HEAD,
-            color="gold",
-            width=wi,
-            spacing=0,
-            render=False
-            )
-
-        self.cg.set_color("sport grey 80")
-        self.cg.rect(x-pad_h, y-5, w+(pad_h*2), h+10)
-        self.cg.text_render(x, y)
-
-        ### Text
-
-        y = self.cg.safe("t") + off + h + 40
-        w, h = self.cg.text(text ,
-            font=FONT_BODY,
-            color="text_tick",
-            width=wi,
-            spacing=0,
-            render=False
-            )
-
-        self.cg.set_color("sport grey 80")
-        self.cg.rect(x-pad_h, y-10, w+(pad_h*2), h+100)
-        
-        
-        self.cg.text_render(x, y)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        self.cg.nxkit_text_area(header, text, source)
 
 
 
@@ -187,7 +103,7 @@ class Plugin(NXCGPlugin):
         pad_btm = 20
         spacing = 150
         header_top = 216
-        
+
         if header:
             self.ctx.set_font_size(header_size)
             tw,th = self.ctx.text_extents(header)[2:4]
@@ -231,14 +147,10 @@ class Plugin(NXCGPlugin):
             spacing=0,
             render=False
             )
-
         top = SAFET + 48
-
         self.cg.new(w, 1080)
-
         self.cg.set_color("black glass 75")
         self.cg.rect(0, top, w, 54)
-        
         self.cg.text(text ,
             pos=(0, top+1),
             font=FONT_CRAWL,
